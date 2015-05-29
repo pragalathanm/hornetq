@@ -1,0 +1,145 @@
+<configuration xmlns="urn:hornetq"
+               xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+               xsi:schemaLocation="urn:hornetq /schema/hornetq-configuration.xsd">
+   
+    <paging-directory>${data.dir:../data}/paging-backup</paging-directory>
+   
+    <bindings-directory>${data.dir:../data}/bindings-backup</bindings-directory>
+   
+    <journal-directory>${data.dir:../data}/journal-backup</journal-directory>
+   
+    <journal-min-files>10</journal-min-files>
+   
+    <large-messages-directory>${data.dir:../data}/large-messages-backup</large-messages-directory>
+
+    <shared-store>false</shared-store>
+    <backup>true</backup>
+    <allow-failback>true</allow-failback>
+   
+    <connectors>      
+        <connector name="netty">
+            <factory-class>org.hornetq.core.remoting.impl.netty.NettyConnectorFactory</factory-class>
+            <param key="host"  value="${hornetq.remoting.netty.host:localhost}"/>
+            <param key="port"  value="${hornetq.remoting.netty.port:5445}"/>
+        </connector>
+      
+        <connector name="netty-throughput">
+            <factory-class>org.hornetq.core.remoting.impl.netty.NettyConnectorFactory</factory-class>
+            <param key="host"  value="${hornetq.remoting.netty.host:localhost}"/>
+            <param key="port"  value="${hornetq.remoting.netty.batch.port:5455}"/>
+            <param key="batch-delay" value="50"/>
+        </connector>
+    </connectors>
+
+    <acceptors>
+        <acceptor name="netty">
+            <factory-class>org.hornetq.core.remoting.impl.netty.NettyAcceptorFactory</factory-class>
+            <param key="host"  value="${hornetq.remoting.netty.host:localhost}"/>
+            <param key="port"  value="${hornetq.remoting.netty.port:5445}"/>
+        </acceptor>
+      
+        <acceptor name="netty-throughput">
+            <factory-class>org.hornetq.core.remoting.impl.netty.NettyAcceptorFactory</factory-class>
+            <param key="host"  value="${hornetq.remoting.netty.host:localhost}"/>
+            <param key="port"  value="${hornetq.remoting.netty.batch.port:5455}"/>
+            <param key="batch-delay" value="50"/>
+            <param key="direct-deliver" value="false"/>
+        </acceptor>
+    </acceptors>
+
+    <broadcast-groups>
+        <broadcast-group name="bg-group1">
+            <jgroups-file>jgroups-tcp.xml</jgroups-file>
+            <jgroups-channel>hornetq_broadcast_channel</jgroups-channel>
+            <connector-ref>netty</connector-ref>
+        </broadcast-group>
+    </broadcast-groups>
+
+    <discovery-groups>
+        <discovery-group name="dg-group1">
+            <jgroups-file>jgroups-tcp.xml</jgroups-file>
+            <jgroups-channel>hornetq_broadcast_channel</jgroups-channel>
+            <refresh-timeout>10000</refresh-timeout>
+        </discovery-group>
+    </discovery-groups>
+   
+    <cluster-user>HornetQClusterUser</cluster-user>
+    <cluster-password>137c70c1ec4282b3f9e60b8febf05809</cluster-password>
+      
+    <cluster-connections>
+        <cluster-connection name="HornetQCluster">
+            <address>jms</address>
+            <connector-ref>netty</connector-ref>
+            <check-period>1000</check-period>
+            <connection-ttl>5000</connection-ttl>
+            <min-large-message-size>50000</min-large-message-size>
+            <call-timeout>5000</call-timeout>
+            <retry-interval>500</retry-interval>
+            <retry-interval-multiplier>1.0</retry-interval-multiplier>
+            <max-retry-interval>5000</max-retry-interval>
+            <reconnect-attempts>-1</reconnect-attempts>
+            <use-duplicate-detection>true</use-duplicate-detection>
+            <forward-when-no-consumers>true</forward-when-no-consumers>
+            <max-hops>2</max-hops>
+            <confirmation-window-size>32000</confirmation-window-size>
+            <call-failover-timeout>30000</call-failover-timeout>
+            <notification-interval>1000</notification-interval>
+            <notification-attempts>2</notification-attempts>
+            <discovery-group-ref discovery-group-name="dg-group1"/>
+        </cluster-connection>
+   
+    </cluster-connections>
+   
+    <grouping-handler name="my-grouping-handler">
+        <type>LOCAL</type>
+        <address>jms</address>
+        <timeout>5000</timeout>
+    </grouping-handler>
+
+    <security-settings>
+        <security-setting match="#">
+            <permission type="createNonDurableQueue" roles="admin"/>
+            <permission type="deleteNonDurableQueue" roles="admin"/>
+            <permission type="createDurableQueue" roles="admin"/>
+            <permission type="deleteDurableQueue" roles="admin"/>
+            <permission type="consume" roles="admin"/>
+            <permission type="send" roles="admin"/>
+        </security-setting>
+     
+        <security-setting match="jms.queue.hornetq.#">
+            <permission type="manage" roles="admin"/>
+            <permission type="createNonDurableQueue" roles="admin"/>
+            <permission type="deleteNonDurableQueue" roles="admin"/>
+            <permission type="createDurableQueue" roles="admin"/>
+            <permission type="deleteDurableQueue" roles="admin"/>
+            <permission type="consume" roles="admin"/>
+            <permission type="send" roles="admin"/>
+        </security-setting>
+        
+        <security-setting match="jms.#">
+            <permission type="manage" roles="admin"/>
+            <permission type="createNonDurableQueue" roles="admin"/>
+            <permission type="deleteNonDurableQueue" roles="admin"/>
+            <permission type="createDurableQueue" roles="admin"/>
+            <permission type="deleteDurableQueue" roles="admin"/>
+            <permission type="consume" roles="admin,guest"/>
+            <permission type="send" roles="admin,guest"/>
+        </security-setting>
+        
+    </security-settings>
+
+    <address-settings>
+        <!--default for catch all-->
+        <address-setting match="#">
+            <dead-letter-address>jms.queue.DLQ</dead-letter-address>
+            <expiry-address>jms.queue.ExpiryQueue</expiry-address>
+            <redelivery-delay>0</redelivery-delay>
+            <max-size-bytes>10485760</max-size-bytes>       
+            <message-counter-history-day-limit>10</message-counter-history-day-limit>
+            <address-full-policy>BLOCK</address-full-policy>
+        </address-setting>
+        <address-setting match="jms.#">
+            <redistribution-delay>5000</redistribution-delay>
+        </address-setting>
+    </address-settings>
+</configuration>

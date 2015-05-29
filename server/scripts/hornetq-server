@@ -1,0 +1,63 @@
+#!/bin/bash
+set -e
+
+PATH=/bin:/usr/bin:/sbin:/usr/sbin
+
+LOG_DIR="/var/log/erp/hornetq"
+LIVE="clustered"
+BACKUP="clustered-backup"
+
+function start_server() {
+    SERVER=$1
+    LOG_FILE=$2
+
+    echo "Starting hornetq server"
+    HOST=`cat /etc/hornetq/config/host`
+    sed -ie "s/hornetq.remoting.netty.host:localhost/hornetq.remoting.netty.host:$HOST/g" "/usr/lib/hornetq/config/stand-alone/$SERVER/hornetq-configuration.xml"
+    sed -ie "s/jnp.host:localhost/jnp.host:$HOST/g" "/usr/lib/hornetq/config/stand-alone/$SERVER/hornetq-beans.xml"
+    cd /usr/lib/hornetq/bin
+    sudo ./run.sh "/usr/lib/hornetq/config/stand-alone/$SERVER" &>>$LOG_FILE &
+}
+
+function stop_server() {
+    SERVER=$1
+    echo "Stopping hornetq server"
+    cd /usr/lib/hornetq/bin
+    sudo ./stop.sh "/usr/lib/hornetq/config/stand-alone/$SERVER"
+}
+
+main()
+{
+    if [ ! -z $1 ] && [ ! -z $2 ]; then
+        SERVER=""
+        LOG_FILE=""
+        case "$2" in
+            live)
+                SERVER=$LIVE
+                LOG_FILE="$LOG_DIR/console.log"
+            ;;
+            backup)
+                SERVER=$BACKUP
+                LOG_FILE="$LOG_DIR/backup-console.log"
+            ;;
+            *)
+                echo "Wrong command. Use: [start live|backup/stop live|backup]"
+                return 1
+            ;;
+        esac
+
+        case "$1" in
+        start)
+            start_server $SERVER $LOG_FILE
+        ;;
+        stop)
+            stop_server $SERVER
+        ;;
+        *)
+            echo "Wrong command. Use: [start live|backup/stop live|backup]"
+        ;;
+        esac
+    fi
+}
+
+main $1 $2
